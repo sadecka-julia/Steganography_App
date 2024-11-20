@@ -5,8 +5,6 @@ binarnych ciągów, a następnie wstawia do wybranych pikseli obrazu, na podstaw
 odczytując bity ukrytej wiadomości z najmniej znaczących bitów pikseli.
 
 Moduły:
-- `convertToBinary`  Zamienia wiadomość tekstową na postać binarną, z dodatkowym nagłówkiem zawierającym długość wiadomości.
-- `convertToString`  Konwertuje wiadomość z formatu binarnego z powrotem na tekst.
 - `convertImage`  Konwertuje obraz na macierz numpy w celu ułatwienia manipulacji.
 - `calculateStep`  Oblicza krok, co ile pikseli będzie zakodowany bit wiadomości.
 - `lsbCoding`  Koduje wiadomość w obrazie, zmieniając ostatnie bity wybranych pikseli.
@@ -14,67 +12,9 @@ Moduły:
 - `codeExampleMessage`  Przykład zakodowania wiadomości w obrazie.
 """
 
-import math
-import sys
 import numpy as np
 from PIL import Image
-
-
-'''Konwertuje wiadomość tekstową na format binarny z nagłówkiem zawierającym długość wiadomości i krok.
-Zwraca:
-1. Nagłówek zakodowany w postaci binarnej (header_in_binary)
-2. Zakodowaną wiadomość w postaci binarnej (message_in_binary)
-'''
-def rlsbConvertToBinary(message, step):
-    table_of_bin = []
-    step = str(step)
-    header = str((len(message)*7) + 77)  # Obliczenie długości wiadomości + 77 bitów (nagłówel)
-    header_in_binary = ""
-    message_in_binary = ""
-
-    # Dodanie zer do długości i kroku, aby krok miał zawsze znaki, a długość 7
-    while len(step) < 4:
-        step = '0' + step
-    while len(header) < 7:
-        header = '0' + header
-
-    header = step + header
-
-
-    # Konwersja nagłówka do postaci binarnej
-    for char in header:
-        bin_repr = bin(ord(char))[2:].zfill(7)
-        table_of_bin.append(bin_repr)
-
-    for b in table_of_bin:
-        header_in_binary += b
-
-    table_of_bin = []
-    
-    # Konwersja wiadomości do posatci binarnej
-    for char in message:
-        bin_repr = bin(ord(char))[2:].zfill(7)
-        table_of_bin.append(bin_repr)
-
-    for b in table_of_bin:
-        message_in_binary += b
-    
-    return header_in_binary, message_in_binary
-
-
-'''Zamienia wiadomość z postaci binarnej na tekst
-Zwraca:
-- Wiadomość w postaci tekstowej'''
-def convertToString(message_in_binary):
-    table_of_strings = []
-    message = ""
-    for char in range(0, len(message_in_binary), 7):
-        table_of_strings.append(chr(int(message_in_binary[char:char+7], 2)))
-
-    for i in table_of_strings:
-        message += i
-
-    return message
+from mess_preparation import *
 
 
 # Konwertuje obraz na macierz numpy w celu manipulacji pikselami
@@ -90,9 +30,9 @@ Zwraca:
 - Obliczony krok.
 '''
 def calculateStep(message_size, img):
-    if (message_size*7) > (img.size-77):
+    if (message_size*7+34) > (img.size-10):
         raise ValueError("The message is too long to encode in this picture")
-    return (img.size - 77) // (message_size*7)
+    return (img.size - 10) // (message_size*7+34)
 
 
 '''Koduje wiadomość w obrazie poprzez zmianę najmniej znaczących bitów wybranych pikseli.
@@ -100,17 +40,16 @@ Zwraca:
 1. Obraz zakodowany w formacie numpy
 2. Obraz zakodowany w formacie PIL (do zapisu)
 '''
-def rlsbCoding(img, message, header, step):
+def rlsbCoding(img, message, step):
     shape = img.shape     # Kształt obrazu do przywrócenia po modyfikacji
-    size = img.size       # Rozmiar obrazu
+    size = img.size
     resized_img = img.reshape(1, size)  # Zmiena obrazu na tablicę jednowymiarową
     pixel = 0              # Zmienna kontrolująca przemieszczanie się po pikselach 
-    
     # Kodowanie nagłówka
-    for bit in range(0, len(header)-1):
-        if header[bit] == '0':
+    for bit in range(0, 10):
+        if message[bit] == '0':
             resized_img[0, pixel] = resized_img[0, pixel] & ~1  # Wyzerowanie ostatniego bitu
-        elif header[bit] == '1':
+        elif message[bit] == '1':
             resized_img[0, pixel] = resized_img[0, pixel] | 1   # Ustawia ostatni bit na 1
         else:
             print("Błąd")
@@ -118,7 +57,7 @@ def rlsbCoding(img, message, header, step):
     
     pixel += 1
     # Kodowanie wiadomości
-    for bit in range(0, len(message)):
+    for bit in range(10, len(message)):
         if message[bit] == '0':
             resized_img[0, pixel] = resized_img[0, pixel] & ~1  # Wyzerowanie ostatniego bitu
         elif message[bit] == '1':
@@ -137,21 +76,31 @@ def rlsbDecoding(img_path):
     _, img = convertImage(img_path)
     message = ''
     resized_img = img.reshape(1, img.size)
+    step = ''
     size_of_text = ''
 
-    # Odczytanie nagłówka (77 bitów)
-    for bit in range(0, 77):      # (2, 149, 3) - jeżeli chcemy zakodować wiadomość tylko w pikselach B (blue), wtedy należy zmeinić też pętlę poniżej (2, (size*3)+2, 3), a rakże w funkcji coding
+    # Read step (10 pierwszych bitów)
+    for bit in range(0, 10):
+        if resized_img[0, bit] % 2 == 0:
+            step += '0'
+        elif resized_img[0, bit] % 2 == 1:
+            step += '1'
+        else:
+            print("Błąd")
+    step = int(step, 2) # Zmiana z postaci binarnej
+        
+    # Odczytanie długości wiadomości
+    for bit in range(11, (20*step)+11, step):
         if resized_img[0, bit] % 2 == 0:
             size_of_text += '0'
         elif resized_img[0, bit] % 2 == 1:
             size_of_text += '1'
         else:
             print("Błąd")
-    size = int(convertToString(size_of_text)[4:]) - 77
-    step = int(convertToString(size_of_text)[:4])
+    size_of_text = int(size_of_text, 2) + 20
 
-    # Odczytanie ukrytej wiadomości
-    for bit in range(77, (size*step)+77, step):
+    # Odczytanie wiadomości (od miejsca w którym zakończyliśmy czytać długość wiadomości)
+    for bit in range((20*step)+11, (size_of_text*step)+11, step):
         if resized_img[0, bit] % 2 == 0:
             message += '0'
         elif resized_img[0, bit] % 2 == 1:
@@ -161,30 +110,29 @@ def rlsbDecoding(img_path):
     return message 
 
 
-
-def codeExampleMessage(path):
-    message = "Lorem ipsum dolor sit amet, cibus nibh. uspendisse sit amet augue nibh. Suspendisse eget "
+def codeMessageRandomLSB(path, message):
     _, img = convertImage(path)
-    step = calculateStep(len(message), img)
-    header_in_binary, message_in_binary= rlsbConvertToBinary(message, step)
-    _, stego_img = rlsbCoding(img, message_in_binary, header_in_binary, step)
-    stego_img.save("stego.png")
+    cal_step = calculateStep(len(message), img)
+    message_in_binary= convertToBinary(message, cal_step)
+    _, stego_img = rlsbCoding(img, message_in_binary, cal_step)
     return stego_img
 
 
-def codeInputMessage(path): # do poprawki
-    message = input("Enter message to code in the image: \n")
-    message_in_binary, size_of_mess = rlsbConvertToBinary(message)
-    _, img = convertImage(path)
-    _, stego_img = rlsbCoding(img, message_in_binary)
-    return stego_img
+def decodeMessageRandomLSB(path):
+    print("Odczytywanie wiadomości: ")
+    mess = convertToString(rlsbDecoding(path))
+    if mess[:2] != '**':
+        raise ValueError
+    print(f"Message: {mess}")
+    return mess[2:]
 
 
 if __name__ == '__main__':
-    # # message1 = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc at arcu lorem. Pellentesque iaculis, odio non volutpat consequat, velit lectus vehicula ipsum, a maximus metus tortor et metus. Donec massa elit, viverra id dignissim in, dignissim at ex. Suspendisse in faucibus nibh. Proin pretium sodales ante ut ultricies. Mauris vel diam iaculis, finibus tellus sit amet, convallis diam. Pellentesque et felis aliquam, finibus dolor at, commodo odio. In fringilla imperdiet lectus, eu rutrum ligula pulvinar nec. Sed malesuada tellus in sapien pellentesque pulvinar. Ut quis metus faucibus elit pretium aliquam. Vestibulum at nulla et risus tristique tincidunt. Nunc porttitor et eros feugiat consectetur. Suspendisse mauris elit, ultrices non risus nec, aliquet pretium purus. Vestibulum dignissim urna eget egestas porta. Aenean eget eros dapibus, fringilla nisi vel, tincidunt ex. Integer vitae vulputate nisi. Cras egestas sem lorem, vel maximus metus ultricies ac. Praesent lobortis egestas dignissim. Etiam porttitor faucibus erat. Curabitur dapibus sem at faucibus facilisis.Maecenas congue odio sed ultricies consectetur. Nullam venenatis orci ac diam maximus, nec elementum erat fermentum. Nullam nisl nibh, luctus id blandit at, luctus eu purus. Duis ultrices, velit eu consequat semper, arcu nisl dapibus elit, commodo egestas ante odio vitae justo. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Suspendisse libero lectus, condimentum a eleifend pellentesque, ultrices a mi. Nam eu mi vehicula, porttitor eros varius, dictum justo. In fringilla vel purus eu ultrices. Donec imperdiet, nulla eget aliquam aliquet, diam eros iaculis erat, at venenatis nunc magna sollicitudin erat. Donec diam odio, hendrerit nec fermentum eu, fermentum non eros. Suspendisse sit amet augue nibh. Suspendisse eget magna at orci malesuada porttitor id et eros."
-    path = 'd:/STUDIA/Cyberka/Inzynierka/Proby/Zdjecia/16x16_mem.png'
-    path_random = 'D:\STUDIA\Cyberka\Inzynierka\stego.png'
-    codeExampleMessage(path)
-    mess = rlsbDecoding(path_random)
-    print(convertToString(mess))
+    message = "Hello World"
+    path = 'path_to_image'
+    stego_path = 'path_to_stego_image'
+    stego_img = codeMessageRandomLSB(path, message)
+    stego_img.save(stego_path)
+    decodeMessageRandomLSB(stego_path)
+
 

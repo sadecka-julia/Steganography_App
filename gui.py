@@ -1,100 +1,259 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
-from tkinter import ttk
+from customtkinter import *
 from PIL import Image, ImageTk
-import randomly_lsb  # Importujemy funkcje z random_LSB.py
-import lsb  # Importujemy funkcje z lsb.py
-import os
+import lsb
+import randomly_lsb as rlsb
 
-# Funkcja do wyboru obrazu
-def load_image():
-    file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.png;*.jpg;*.jpeg")])
-    if file_path:
-        global image_path
-        image_path = file_path
-        img = Image.open(file_path)
-        img.thumbnail((200, 200))  # Skaluje obraz, żeby zmieścił się w oknie
-        img_tk = ImageTk.PhotoImage(img)
-        image_label.config(image=img_tk)
-        image_label.image = img_tk
+class StegoApp(CTk):
+    def __init__(self):
+        super().__init__()
 
-# Funkcja do kodowania wiadomości w obrazie
-def encode_message():
-    global image_path
-    message = message_entry.get()  # Pobieramy wiadomość od użytkownika
-    method = method_combobox.get()  # Pobieramy metodę wybraną przez użytkownika
+        self.geometry("500x600")
+        self.title("Image Steganography App")
+        self._set_appearance_mode("dark")
+        # self.configure(fg_color="#432E54")
+        set_default_color_theme("dark-blue")
+        self.grid_columnconfigure((0, 1), weight=1)
+        self.grid_rowconfigure(0, weight=0)
 
-    if not image_path or not message:
-        messagebox.showerror("Błąd", "Proszę wczytać obraz i wpisać wiadomość.")
-        return
+        self.image_label = None
+        self.loaded_image = None
+        self.saved_input = ""
+        self.filepath = ""
 
-    if method == "Klasyczna LSB":
-        try:
-            _, img = lsb.convertImage(image_path)
-            message_in_binary = lsb.convertToBinary(message)
-            _, stego_img = lsb.lsbCoding(img, message_in_binary)
-            save_stego_image(stego_img, image_path)
-        except Exception as e:
-            messagebox.showerror("Błąd", f"Nie udało się zakodować wiadomości: {str(e)}")
+        self.button1 = CTkButton(master=self, 
+                                text="Zakoduj wiadomość",
+                                width=200, 
+                                fg_color="#F18F01", 
+                                hover_color="#F0EBD8", 
+                                border_color="#F18F01", 
+                                bg_color="#242424",
+                                border_width=2,
+                                text_color="#242424", 
+                                command=self.create_encode_view)
+        
+        self.button2 = CTkButton(master=self, 
+                                text="Odczytaj wiadomość",
+                                width=200, 
+                                fg_color="#F18F01", 
+                                hover_color="#F0EBD8", 
+                                border_color="#F18F01", 
+                                bg_color="#242424",
+                                border_width=2,
+                                text_color="#242424", 
+                                command=self.create_decode_view)
+        
+        self.button3 = CTkButton(master=self, 
+                                text="Wybierz zdjęcie", 
+                                fg_color="#748CAB", 
+                                hover_color="#F0EBD8", 
+                                border_color="#748CBB", 
+                                bg_color="#242424",
+                                border_width=2,
+                                text_color="#242424", 
+                                command=self.select_image)
 
-    elif method == "Random LSB":
-        try:
-            _, img = randomly_lsb.convertImage(image_path)
-            step = randomly_lsb.calculateStep(len(message), img)
-            header_in_binary, message_in_binary = randomly_lsb.convertToBinary(message, step)
-            _, stego_img = randomly_lsb.lsbCoding(img, message_in_binary, header_in_binary, step)
-            save_stego_image(stego_img, image_path)
-        except Exception as e:
-            messagebox.showerror("Błąd", f"Nie udało się zakodować wiadomości: {str(e)}")
-    else:
-        messagebox.showerror("Błąd", "Proszę wybrać metodę kodowania.")
+        self.button1.grid(row=0, column=0, padx=0, pady=(0, 0), sticky="nsew")
+        self.button2.grid(row=0, column=1, padx=0, pady=(0, 0), sticky="nsew")
+        self.button3.grid(row=2, columnspan=2, padx=150, pady=(10, 50), sticky="new")
 
-# Funkcja do zapisu obrazu z zakodowaną wiadomością
-def save_stego_image(stego_img, original_image_path):
-    save_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG files", "*.png")])
-    if save_path:
-        stego_img.save(save_path)
-        messagebox.showinfo("Sukces", f"Stego-obraz zapisany jako: {os.path.basename(save_path)}")
-    else:
-        messagebox.showerror("Błąd", "Nie udało się zapisać obrazu.")
+        self.current_view = None
 
-# Tworzenie głównego okna aplikacji
-root = tk.Tk()
-root.title("Steganografia w obrazach")
-root.geometry("400x400")
 
-# Nagłówek aplikacji
-header = tk.Label(root, text="Steganografia w obrazach", font=("Helvetica", 16))
-header.pack(pady=10)
+    def clear_view(self):
+        """Usuwa aktualnie wyświetlane widżety."""
+        if self.current_view:
+            for widget in self.current_view:
+                widget.destroy()
+            self.current_view = None
 
-# Przyciski i pola do wczytania obrazu
-image_frame = tk.Frame(root)
-image_frame.pack(pady=10)
 
-image_button = tk.Button(image_frame, text="Wczytaj obraz", command=load_image)
-image_button.pack(side=tk.LEFT)
+    def button_callback(self):
+        print("button pressed")
 
-image_label = tk.Label(image_frame)
-image_label.pack(side=tk.RIGHT)
 
-# Pole tekstowe do wpisania wiadomości
-message_label = tk.Label(root, text="Wpisz wiadomość do ukrycia:")
-message_label.pack(pady=10)
+    def create_encode_view(self):
+        self.clear_view()
+        self.current_view = []
 
-message_entry = tk.Entry(root, width=50)
-message_entry.pack(pady=5)
+        label = CTkLabel(master=self, 
+                         text="Wprowadź wiadomość do ukrycia",
+                         fg_color="#748CAB",
+                         bg_color="#242424",
+                         text_color="#242424")
+        
+        self.textbox = CTkEntry(master=self, 
+                             fg_color="#F0EBD8",
+                             bg_color="#242424",
+                             border_width=2, 
+                             border_color="#748CBB",  
+                             height=30)
+        
+        label2 = CTkLabel(master=self, 
+                         text="Wybierz opcję",
+                         fg_color="#748CAB",
+                         bg_color="#242424",
+                         text_color="#242424")
+        
+        self.combobox = CTkComboBox(master=self, 
+                               values=["LSB", "Random LSB", "LSB+Huffman", "MSB", "Pixel MSB", "DCT", "FFT"], 
+                               fg_color="#F0EBD8",
+                               bg_color="#242424",
+                               border_width=2, 
+                               border_color="#748CBB", 
+                               dropdown_fg_color="#F4989C")
+        
+        self.button4 = CTkButton(master=self, 
+                            text="Zakoduj", 
+                            fg_color="#F18F01",
+                            bg_color="#242424",
+                            border_width=2, 
+                            border_color="#F18F11",
+                            text_color="#242424",
+                            hover_color="#F0EBD8",  
+                            command=self.encode)
+        
+        label.grid(row=3, columnspan=2, padx=50, pady=(0, 10), sticky="nsew")
+        self.textbox.grid(row=4, columnspan=2, padx=50, pady=(0, 40), sticky="nsew")
+        label2.grid(row=5, columnspan=2, padx=150, pady=(0, 10), sticky="nsew")
+        self.combobox.grid(row=6, columnspan=2, padx=150, pady=(0, 40), sticky="nsew")
+        self.button4.grid(row=7, columnspan=2, padx=150, pady=(0, 50), sticky="senw")
 
-# Wybór metody kodowania
-method_label = tk.Label(root, text="Wybierz metodę kodowania:")
-method_label.pack(pady=10)
+        self.current_view.extend([label, self.textbox, label2, self.combobox, self.button4])
 
-method_combobox = ttk.Combobox(root, values=["Klasyczna LSB", "Random LSB"])
-method_combobox.pack(pady=5)
-method_combobox.current(0)
 
-# Przyciski do rozpoczęcia kodowania
-encode_button = tk.Button(root, text="Zakoduj wiadomość", command=encode_message)
-encode_button.pack(pady=20)
+    def create_decode_view(self):
+        self.clear_view()
+        self.current_view = []
+        
+        label2 = CTkLabel(master=self, 
+                         text="Wybierz opcję",
+                         fg_color="#748CAB",
+                         bg_color="#242424",
+                         text_color="#242424")
+        
+        self.combobox_dec = CTkComboBox(master=self, 
+                                    values=["LSB", "Random LSB", "LSB+Huffman", "MSB", "Pixel MSB", "DCT", "FFT"], 
+                                    fg_color="#F0EBD8",
+                                    bg_color="#242424",
+                                    border_width=2, 
+                                    border_color="#748CBB", 
+                                    dropdown_fg_color="#F4989C")
 
-# Uruchomienie aplikacji
-root.mainloop()
+        self.button5 = CTkButton(master=self, 
+                            text="Odczytaj", 
+                            fg_color="#F18F01",
+                            bg_color="#242424",
+                            border_width=2, 
+                            border_color="#F18F11",
+                            text_color="#242424",
+                            hover_color="#F0EBD8",  
+                            command=self.decode)
+        
+        label2.grid(row=3, columnspan=2, padx=150, pady=(0, 10), sticky="nsew")
+        self.combobox_dec.grid(row=4, columnspan=2, padx=150, pady=(0, 40), sticky="sew")
+        self.button5.grid(row=5, columnspan=2, padx=150, pady=(0, 50), sticky="sew")
+
+        self.current_view.extend([label2, self.combobox_dec, self.button5])
+        
+
+    def select_image(self):
+        """Pozwala użytkownikowi wybrać obraz i wyświetla go."""
+        self.filepath = filedialog.askopenfilename(
+            filetypes=[("Image Files", "*.png;*.jpg;*.jpeg;*.bmp;*.gif")]
+        )
+        if self.filepath:
+            self.display_image(self.filepath)
+        
+
+    def display_image(self, filepath):
+        """Wyświetla obraz nad przyciskiem."""
+        image = Image.open(filepath)
+        image = image.resize((200, 200))  # Zmiana rozmiaru obrazu
+        self.loaded_image = ImageTk.PhotoImage(image)
+
+        if self.image_label:
+            self.image_label.destroy()  # Usuwamy poprzedni obraz, jeśli istnieje
+
+        self.image_label = CTkLabel(master=self, image=self.loaded_image, text="")
+        self.image_label.grid(row=1, column=0, columnspan=2, padx=150, pady=10, sticky="nsew")
+
+
+    def encode(self):
+        input_message = self.textbox.get()
+        input_method = self.combobox.get()
+
+        if not input_message:
+            tk.messagebox.showerror("Błąd", "Wprowadź wiadomość do zakodowania.")
+            return
+        
+        if not self.filepath:
+            tk.messagebox.showerror("Błąd", "Wprowadź obraz do zakodowania wiadomości.")
+            return
+        
+        if input_method == "LSB":
+            try:
+                stego_img = lsb.codeMessageLSB(self.filepath, input_message)
+                self.saveStegoImage(stego_img)
+            except Exception as e:
+                tk.messagebox.showerror("Błąd", f"Nie udało się zakodować wiadomości {str(e)}")
+                return
+            
+        elif input_method == "Random LSB":
+            try:
+                stego_img = rlsb.codeMessageRandomLSB(self.filepath, input_message)
+                self.saveStegoImage(stego_img)
+            except Exception as e:
+                tk.messagebox.showerror("Błąd", f"Nie udało się zakodować wiadomości {str(e)}")
+                return
+            
+
+    def decode(self):
+        method = self.combobox_dec.get()
+        if not self.filepath:
+            tk.messagebox.showerror("Błąd", "Wprowadź obraz do odczytania wiadomości")
+            return
+        
+        if method == "LSB":
+            try:
+                mess = lsb.decodeMessageLSB(self.filepath)
+                self.diplayDecodedMessage(mess)
+            except Exception as e:
+                tk.messagebox.showerror("Błąd", f"Nie udało się odczytać wiadomości {str(e)}")
+                return
+        
+        if method == "Random LSB":
+            try:
+                mess = rlsb.decodeMessageRandomLSB(self.filepath)
+                self.diplayDecodedMessage(mess)
+            except Exception as e:
+                tk.messagebox.showerror("Błąd", f"Nie udało się odczytać wiadomości {str(e)}")
+                return
+
+    def saveStegoImage(self, steg_img):
+        save_path = filedialog.asksaveasfilename(
+            defaultextension=".png",
+            filetypes=[("Image Files", "*.png;*.bmp;*.gif")]
+        )
+        if save_path:
+            steg_img.save(save_path)
+            tk.messagebox.showinfo("Sukces", f"Stego-obraz zapisany jako: {os.path.basename(save_path)}")
+        else:
+            tk.messagebox.showerror("Błąd", f"Nie udało się zapisać obrazu")
+
+
+    def diplayDecodedMessage(self, message):
+        if message:
+            tk.messagebox.showinfo("Sukces", f"Odczytana wiadomość: {str(message)}")
+        else:
+            tk.messagebox.showerror("Błąd", f"Nie udało się odczytać wiadomości")
+
+            
+
+        
+
+if __name__ == "__main__":
+    # Tworzymy aplikację
+    app = StegoApp()
+    # Aby aplikacja wyświetlała się cały czas
+    app.mainloop()
