@@ -3,7 +3,6 @@ import numpy as np
 from PIL import Image
 from collections import defaultdict
 
-
 def build_huffman_tree(message):
     frequency = defaultdict(int)
     for char in message:
@@ -26,7 +25,7 @@ def build_huffman_tree(message):
     for char, code in huffman_tree:
         huffman_codes[char] = code
 
-    print(huffman_codes)
+    # print(huffman_codes)
 
     return huffman_codes
 
@@ -49,7 +48,7 @@ def decompress_message(binary_message, huffman_codes):
     return decoded_message
 
 
-def lsbCoding(img, message):
+def huffmanCoding(img, message):
     shape = img.shape
     size = img.size
     resized_img = img.reshape(-1)
@@ -78,7 +77,7 @@ def lsbCoding(img, message):
     return new_img, pil_image, huffman_codes
 
 
-def lsbDecoding(img_path):
+def huffmanDecoding(img_path):
     _, img = convertImage(img_path)
     resized_img = img.reshape(-1)
     pixel = 0
@@ -105,31 +104,22 @@ def convertImage(path):
     numpy_img = np.array(img)
     return img, numpy_img
 
-
-def codeInputMessage():
-    message = input("Wprowadź wiadomość do zakodowania: \n")
-    path = '/home/hubert/Documents/Studia/photo.jpg'
-    output_path = "/home/hubert/Documents/Studia/wiadomosc_huffman.png"
-    
-    _, img = convertImage(path)
-    img_with_info, stego_img, huffman_codes = lsbCoding(img, message)
-    stego_img.save(output_path)
-    print(f"Wiadomość zakodowana w obrazie: {output_path}")
-
-    return huffman_codes, output_path
-
-
-def decodeMessage(huffman_codes, stego_path):
-    compressed_message = lsbDecoding(stego_path)
-    print(huffman_codes)
-    print(compressed_message)
+def decodeMessageHuffman(huffman_codes, stego_path):
+    compressed_message = huffmanDecoding(stego_path)
     decoded_message = decompress_message(compressed_message, huffman_codes)
-    print(f"Odkodowana wiadomość: {decoded_message}")
 
+    return(decoded_message)
+
+def codeMessageHuffman(path, message, output_path):
+    _, img = convertImage(path)
+    _, stego_img, huffman_codes = huffmanCoding(img, message)
+    stego_img.save(output_path)
+
+    return huffman_codes
 
 if __name__ == '__main__':
-    # Kodowanie wiadomości
-    huffman_codes, stego_path = codeInputMessage()
-
-    # Dekodowanie wiadomości
-    decodeMessage(huffman_codes, stego_path)
+    message = 'Hello World!'
+    path = '/home/hubert/Documents/Studia/photo.jpg'
+    stego_path = "/home/hubert/Documents/Studia/wiadomosc_huffman.png"
+    huffman_codes = codeMessageHuffman(path, message, stego_path)
+    print("Odkodowana wiadomość:", decodeMessageHuffman(huffman_codes, stego_path))

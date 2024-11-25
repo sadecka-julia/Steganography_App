@@ -2,49 +2,7 @@ import math
 import sys
 import numpy as np
 from PIL import Image
-
-
-'''Zamienia wiadomość tekstową na binarną, aby mogła być zakodowana w pikselach obrazu.
-Zwraca:
-- Zakodowaną wiadomość w postaci binarnej.
-'''
-def convertToBinary(message):
-    table_of_bin = []
-    # Zakodowanie długości wiadomości jako liczba bitów
-    len_of_message = (len(message) * 7)  # długość wiadomości w bitach
-    len_of_message_bin = bin(len_of_message)[2:].zfill(20)  # konwersja na binarną postać długości z wypełnieniem do 49 bitów
-
-    print(len_of_message, len_of_message_bin)
-    # Dołączenie długości binarnej do wiadomości
-    message_in_binary = len_of_message_bin
-
-    # Konwersja każdego znaku na 7-bitową reprezentację
-    for char in message:
-        bin_repr = bin(ord(char))[2:].zfill(7)
-        table_of_bin.append(bin_repr)
-
-    for b in table_of_bin:
-        message_in_binary += b
-    print(message_in_binary)
-
-    return message_in_binary
-
-
-'''Zamienia binarną wiadomość na tekst.
-Zwraca:
-- Wiadomość w postaci tekstowej.
-'''
-def convertToString(message_in_binary):
-    table_of_strings = []
-    message = ""
-    for char in range(0, len(message_in_binary), 7):
-        table_of_strings.append(chr(int(message_in_binary[char:char+7], 2)))
-
-    for i in table_of_strings:
-        message += i
-
-    return message
-
+from mess_preparation import convertToBinary, convertToString
 
 # Konwertuje obraz do macierzy numpy w celu manipulacji pikselami
 def convertImage(path):
@@ -106,46 +64,26 @@ def msbDecoding(img_path):
 
     return message
 
-
-# Funkcja zakodowująca przykładową wiadomość w obrazie i zapisująca wynik do pliku
-def codeExampleMessage(path):
-    message = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc at arcu lorem. Pellentesque iaculis, odio non volutpat consequat, velit lectus vehicula ipsum, a maximus metus tortor et metus. Donec massa elit, viverra id dignissim in, dignissim at ex. Suspendisse in faucibus nibh. Proin pretium sodales ante ut ultricies. Mauris vel diam iaculis, finibus tellus sit amet, convallis diam. Pellentesque et felis aliquam, finibus dolor at, commodo odio. In fringilla imperdiet lectus, eu rutrum ligula pulvinar nec. Sed malesuada tellus in sapien pellentesque pulvinar. Ut quis metus faucibus elit pretium aliquam. Vestibulum at nulla et risus tristique tincidunt. Nunc porttitor et eros feugiat consectetur. Suspendisse mauris elit, ultrices non risus nec, aliquet pretium purus. Vestibulum dignissim urna eget egestas porta. Aenean eget eros dapibus, fringilla nisi vel, tincidunt ex. Integer vitae vulputate nisi. Cras egestas sem lorem, vel maximus metus ultricies ac. Praesent lobortis egestas dignissim. Etiam porttitor faucibus erat. Curabitur dapibus sem at faucibus facilisis.Maecenas congue odio sed ultricies consectetur. Nullam venenatis orci ac diam maximus, nec elementum erat fermentum. Nullam nisl nibh, luctus id blandit at, luctus eu purus. Duis ultrices, velit eu consequat semper, arcu nisl dapibus elit, commodo egestas ante odio vitae justo. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Suspendisse libero lectus, condimentum a eleifend pellentesque, ultrices a mi. Nam eu mi vehicula, porttitor eros varius, dictum justo. In fringilla vel purus eu ultrices. Donec imperdiet, nulla eget aliquam aliquet, diam eros iaculis erat, at venenatis nunc magna sollicitudin erat. Donec diam odio, hendrerit nec fermentum eu, fermentum non eros. Suspendisse sit amet augue nibh. Suspendisse eget magna at orci malesuada porttitor id et eros."
-    _, message_in_binary = convertToBinary(message)
+def codeMessageMSB(path, message):
+    message_in_binary = convertToBinary(message)
     _, img = convertImage(path)
+    if len(message_in_binary) > (img.size):
+        raise Exception("The message is too long to encode in this image")
     _, stego_img = msbCoding(img, message_in_binary)
     return stego_img
 
-def codeInputMessage():
-    message = input("Enter message to code in the image: \n")
-    message_in_binary = convertToBinary(message)
-    _, img = convertImage(path)
-    img_with_info, stego_img = msbCoding(img, message_in_binary)
-    return stego_img
+def decodeMessageMSB(path):
+    mess = convertToString(msbDecoding(path))
+    print(mess[:2])
+    if mess[:2] != '**':
+        raise ValueError
+    return mess[2:]
 
 
 if __name__ == '__main__':
-    # message1 = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc at arcu lorem. Pellentesque iaculis, odio non volutpat consequat, velit lectus vehicula ipsum, a maximus metus tortor et metus. Donec massa elit, viverra id dignissim in, dignissim at ex. Suspendisse in faucibus nibh. Proin pretium sodales ante ut ultricies. Mauris vel diam iaculis, finibus tellus sit amet, convallis diam. Pellentesque et felis aliquam, finibus dolor at, commodo odio. In fringilla imperdiet lectus, eu rutrum ligula pulvinar nec. Sed malesuada tellus in sapien pellentesque pulvinar. Ut quis metus faucibus elit pretium aliquam. Vestibulum at nulla et risus tristique tincidunt. Nunc porttitor et eros feugiat consectetur. Suspendisse mauris elit, ultrices non risus nec, aliquet pretium purus. Vestibulum dignissim urna eget egestas porta. Aenean eget eros dapibus, fringilla nisi vel, tincidunt ex. Integer vitae vulputate nisi. Cras egestas sem lorem, vel maximus metus ultricies ac. Praesent lobortis egestas dignissim. Etiam porttitor faucibus erat. Curabitur dapibus sem at faucibus facilisis.Maecenas congue odio sed ultricies consectetur. Nullam venenatis orci ac diam maximus, nec elementum erat fermentum. Nullam nisl nibh, luctus id blandit at, luctus eu purus. Duis ultrices, velit eu consequat semper, arcu nisl dapibus elit, commodo egestas ante odio vitae justo. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Suspendisse libero lectus, condimentum a eleifend pellentesque, ultrices a mi. Nam eu mi vehicula, porttitor eros varius, dictum justo. In fringilla vel purus eu ultrices. Donec imperdiet, nulla eget aliquam aliquet, diam eros iaculis erat, at venenatis nunc magna sollicitudin erat. Donec diam odio, hendrerit nec fermentum eu, fermentum non eros. Suspendisse sit amet augue nibh. Suspendisse eget magna at orci malesuada porttitor id et eros."
-    path = 'D:\STUDIA\Cyberka\Semestr_7\Steganografia\Zdjęcia\PNG_8.png'
-
-    
-    # message = 'a a1'
-    # message_in_binary = convertToBinary(message)
-    # # print(table_of_bin, message_in_binary)
-    # # print(convertToString("10010001100101110110011011001101111"))
-    # # message_in_binary1 = convertToString(message_in_binary)
-
-    # # print("Przetlumaczona wiadomosc: ", message_in_binary1)
-    
-    # _, img = convertImage(path)
-    # img_with_info, stego_img = msbCoding(img, message_in_binary)
-    # stego_img.save("/home/hubert/Documents/StHelloudia/wiadomosc1.png")
-    
-    codeInputMessage().save("D:\STUDIA\Cyberka\Semestr_7\Steganografia\Zdjęcia\STEGO_PNG_8.png")
-
-    # np.set_printoptions(threshold=sys.maxsize)
-    # print("Img with info\n", img_with_info[0:1, 0:15])
-    stego_path = 'D:\STUDIA\Cyberka\Semestr_7\Steganografia\Zdjęcia\STEGO_PNG_8.png' # jpg zmienia obraz, że nie da się późneij go odczytać
-    _, stego = convertImage(stego_path)
-    # stego = np.array(stego_img)
-    hide_massage = msbDecoding(stego_path)
-    print("Ukryta wiadomość:", convertToString(hide_massage))
+    message = 'Hello World!'
+    path = '/home/hubert/Documents/Studia/photo.jpg'
+    stego_path = '/home/hubert/Documents/Studia/wiadomosc_msb.png' 
+    stego_img = codeMessageMSB(path, message)
+    stego_img.save(stego_path)
+    print("Ukryta wiadomość:", decodeMessageMSB(stego_path))

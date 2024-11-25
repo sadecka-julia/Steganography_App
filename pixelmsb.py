@@ -1,27 +1,6 @@
 import numpy as np
 from PIL import Image
-
-def convertToBinary(message):
-    table_of_bin = []
-    len_of_message = len(message) * 7  # długość wiadomości w bitach
-    len_of_message_bin = bin(len_of_message)[2:].zfill(20)  # konwersja na binarną postać długości z wypełnieniem do 20 bitów
-
-    message_in_binary = len_of_message_bin
-
-    for char in message:
-        bin_repr = bin(ord(char))[2:].zfill(7)
-        table_of_bin.append(bin_repr)
-
-    for b in table_of_bin:
-        message_in_binary += b
-
-    return message_in_binary
-
-def convertToString(message_in_binary):
-    message = ""
-    for i in range(0, len(message_in_binary), 7):
-        message += chr(int(message_in_binary[i:i+7], 2))
-    return message
+from mess_preparation import convertToBinary, convertToString
 
 def convertImage(path):
     img = Image.open(path)
@@ -51,7 +30,10 @@ def pixelMSBCoding(img, message, key='101010'):
             print("Uwaga: Obraz jest za mały, aby zapisać całą wiadomość.")
             break
 
-        r, g, b = region[x, y]
+        try:
+            r, g, b = region[x, y]
+        except ValueError:
+            raise ValueError("Format obrazu jest niepoprawny, spróbuj inne zdjęcie")
     
         red_ones_count = bin(r).count('1')
 
@@ -101,19 +83,29 @@ def pixelMSBDecoding(img_path, key='101010'):
     length_of_message = int(decoded_message[:20], 2)
     message_bits = decoded_message[20:20+length_of_message]
     
-    return convertToString(message_bits)
+    return message_bits
 
-def codeInputMessage():
-    message = input("Enter message to code in the image: \n")
+def codeMessagePixelMSB(path, message):
     message_in_binary = convertToBinary(message)
     _, img = convertImage(path)
-    img_with_info, stego_img = pixelMSBCoding(img, message_in_binary)
+    if len(message_in_binary) > (img.size):
+        raise Exception("The message is too long to encode in this image")
+    _, stego_img = pixelMSBCoding(img, message_in_binary)
     return stego_img
 
-if __name__ == '__main__':
-    path = '/home/hubert/Documents/Studia/photo.jpg'
-    codeInputMessage().save("/home/hubert/Documents/Studia/wiadomosc1.png")
+def decodeMessagePixelMSB(path):
+    mess = convertToString(pixelMSBDecoding(path))
+    print(mess[:2])
+    if mess[:2] != '**':
+        raise ValueError
+    return mess[2:]
 
-    stego_path = '/home/hubert/Documents/Studia/wiadomosc1.png'
-    hide_message = pixelMSBDecoding(stego_path)
-    print("Ukryta wiadomość:", hide_message)
+if __name__ == '__main__':
+
+    message = 'Hello World!'
+    path = '/home/hubert/Documents/Studia/photo.jpg'
+    stego_path = '/home/hubert/Documents/Studia/wiadomosc_pixel.png'
+    stego_img = codeMessagePixelMSB(path, message)
+    stego_img.save(stego_path)
+
+    print("Ukryta wiadomość:", decodeMessagePixelMSB(stego_path))

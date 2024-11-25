@@ -1,8 +1,14 @@
 import tkinter as tk
 from customtkinter import *
 from PIL import Image, ImageTk
+import cv2
 import lsb
 import randomly_lsb as rlsb
+import msb
+import pixelmsb
+import huffman
+import dct
+import readDCT
 
 class StegoApp(CTk):
     def __init__(self):
@@ -207,6 +213,29 @@ class StegoApp(CTk):
                 tk.messagebox.showerror("Błąd", f"Nie udało się zakodować wiadomości {str(e)}")
                 return
             
+        elif input_method == "MSB":
+            try:
+                stego_img = msb.codeMessageMSB(self.filepath, input_message)
+                self.saveStegoImage(stego_img)
+            except Exception as e:
+                tk.messagebox.showerror("Błąd", f"Nie udało się zakodować wiadomości {str(e)}")
+                return
+        
+        elif input_method == "Pixel MSB":
+            try:
+                stego_img = pixelmsb.codeMessagePixelMSB(self.filepath, input_message)
+                self.saveStegoImage(stego_img)
+            except Exception as e:
+                tk.messagebox.showerror("Błąd", f"Nie udało się zakodować wiadomości {str(e)}")
+                
+        elif input_method == "DCT":
+            try:
+                stego_img = dct.codeMessageDCT(self.filepath, input_message)
+                self.saveStegoImage(stego_img, dct=True)
+            except Exception as e:
+                tk.messagebox.showerror("Błąd", f"Nie udało się zakodować wiadomości {str(e)}")
+                return
+            
 
     def decode(self):
         method = self.combobox_dec.get()
@@ -222,21 +251,49 @@ class StegoApp(CTk):
                 tk.messagebox.showerror("Błąd", f"Nie udało się odczytać wiadomości {str(e)}")
                 return
         
-        if method == "Random LSB":
+        elif method == "Random LSB":
             try:
                 mess = rlsb.decodeMessageRandomLSB(self.filepath)
                 self.diplayDecodedMessage(mess)
             except Exception as e:
                 tk.messagebox.showerror("Błąd", f"Nie udało się odczytać wiadomości {str(e)}")
                 return
+            
+        elif method == "MSB":
+            try:
+                mess = msb.decodeMessageMSB(self.filepath)
+                self.diplayDecodedMessage(mess)
+            except Exception as e:
+                tk.messagebox.showerror("Błąd", f"Nie udało się odczytać wiadomości {str(e)}")
+                return
+            
+        elif method == "Pixel MSB":
+            try:
+                mess = pixelmsb.decodeMessagePixelMSB(self.filepath)
+                self.diplayDecodedMessage(mess)
+            except Exception as e:
+                tk.messagebox.showerror("Błąd", f"Nie udało się odczytać wiadomości {str(e)}")
+                return
+            
+        elif method == "DCT":
+            try:
+                mess = readDCT.decodeMessageDCT(self.filepath)
+                self.diplayDecodedMessage(mess)
+            except Exception as e:
+                tk.messagebox.showerror("Błąd", f"Nie udało się odczytać wiadomości {str(e)}")
+                return
 
-    def saveStegoImage(self, steg_img):
+
+    def saveStegoImage(self, steg_img, dct=False):
         save_path = filedialog.asksaveasfilename(
             defaultextension=".png",
             filetypes=[("Image Files", "*.png;*.bmp;*.gif")]
         )
         if save_path:
-            steg_img.save(save_path)
+            if dct:
+                cv2.imwrite(save_path, steg_img)
+            else:
+                steg_img.save(save_path)
             tk.messagebox.showinfo("Sukces", f"Stego-obraz zapisany jako: {os.path.basename(save_path)}")
         else:
             tk.messagebox.showerror("Błąd", f"Nie udało się zapisać obrazu")

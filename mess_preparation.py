@@ -4,6 +4,7 @@ def convertToBinary(message, step=None):
     message = "**" + message
     table_of_bin = []
     len_of_message = (len(message)*7)
+    print(len_of_message)
     len_of_message_bin = bin(len_of_message)[2:].zfill(20)
     message_in_binary = len_of_message_bin
     if step:
