@@ -2,6 +2,7 @@ import tkinter as tk
 from customtkinter import *
 from PIL import Image, ImageTk
 import cv2
+import json
 import lsb
 import randomly_lsb as rlsb
 import msb
@@ -9,12 +10,13 @@ import pixelmsb
 import huffman
 import dct
 import readDCT
+import fmm
 
 class StegoApp(CTk):
     def __init__(self):
         super().__init__()
 
-        self.geometry("500x600")
+        self.geometry("500x700")
         self.title("Image Steganography App")
         self._set_appearance_mode("dark")
         # self.configure(fg_color="#432E54")
@@ -61,7 +63,7 @@ class StegoApp(CTk):
 
         self.button1.grid(row=0, column=0, padx=0, pady=(0, 0), sticky="nsew")
         self.button2.grid(row=0, column=1, padx=0, pady=(0, 0), sticky="nsew")
-        self.button3.grid(row=2, columnspan=2, padx=150, pady=(10, 50), sticky="new")
+        self.button3.grid(row=2, columnspan=2, padx=150, pady=(10, 40), sticky="new")
 
         self.current_view = None
 
@@ -102,7 +104,7 @@ class StegoApp(CTk):
                          text_color="#242424")
         
         self.combobox = CTkComboBox(master=self, 
-                               values=["LSB", "Random LSB", "LSB+Huffman", "MSB", "Pixel MSB", "DCT", "FFT"], 
+                               values=["LSB", "Random LSB", "LSB+Huffman", "MSB", "Pixel MSB", "DCT", "FMM"], 
                                fg_color="#F0EBD8",
                                bg_color="#242424",
                                border_width=2, 
@@ -139,7 +141,7 @@ class StegoApp(CTk):
                          text_color="#242424")
         
         self.combobox_dec = CTkComboBox(master=self, 
-                                    values=["LSB", "Random LSB", "LSB+Huffman", "MSB", "Pixel MSB", "DCT", "FFT"], 
+                                    values=["LSB", "Random LSB", "LSB+Huffman", "MSB", "Pixel MSB", "DCT", "FMM"], 
                                     fg_color="#F0EBD8",
                                     bg_color="#242424",
                                     border_width=2, 
@@ -156,15 +158,15 @@ class StegoApp(CTk):
                             hover_color="#F0EBD8",  
                             command=self.decode)
         
-        label2.grid(row=3, columnspan=2, padx=150, pady=(0, 10), sticky="nsew")
-        self.combobox_dec.grid(row=4, columnspan=2, padx=150, pady=(0, 40), sticky="sew")
-        self.button5.grid(row=5, columnspan=2, padx=150, pady=(0, 50), sticky="sew")
+        label2.grid(row=10, columnspan=2, padx=150, pady=(0, 10), sticky="nsew")
+        self.combobox_dec.grid(row=11, columnspan=2, padx=150, pady=(0, 40), sticky="sew")
+        self.button5.grid(row=12, columnspan=2, padx=150, pady=(0, 50), sticky="sew")
 
         self.current_view.extend([label2, self.combobox_dec, self.button5])
         
 
     def select_image(self):
-        """Pozwala użytkownikowi wybrać obraz i wyświetla go."""
+        # Pozwala użytkownikowi wybrać obraz i wyświetla go.
         self.filepath = filedialog.askopenfilename(
             filetypes=[("Image Files", "*.png;*.jpg;*.jpeg;*.bmp;*.gif")]
         )
@@ -173,7 +175,7 @@ class StegoApp(CTk):
         
 
     def display_image(self, filepath):
-        """Wyświetla obraz nad przyciskiem."""
+        # Wyświetla obraz nad przyciskiem.
         image = Image.open(filepath)
         image = image.resize((200, 200))  # Zmiana rozmiaru obrazu
         self.loaded_image = ImageTk.PhotoImage(image)
@@ -236,6 +238,31 @@ class StegoApp(CTk):
                 tk.messagebox.showerror("Błąd", f"Nie udało się zakodować wiadomości {str(e)}")
                 return
             
+        elif input_method == "LSB+Huffman":
+            try:
+                stego_img, huffman_table = huffman.codeMessageHuffman(self.filepath, input_message)
+                self.saveStegoImage(stego_img)
+            except Exception as e:
+                tk.messagebox.showerror("Błąd", f"Nie udało się zakodować wiadomości {str(e)}")
+                return
+            
+            path_huffman = filedialog.asksaveasfilename(
+                defaultextension=".txt",
+                filetypes=[("Image Files", "*.txt")])
+            if path_huffman:
+                # huffman_table.save(path_huffman)
+                with open(path_huffman, 'w') as f:
+                    f.write(json.dumps(huffman_table))
+
+                tk.messagebox.showinfo("Sukces", f"Udało się zapisać tablicę Huffmana: {os.path.basename(path_huffman)}")
+            else:
+                tk.messagebox.showerror("Błąd", f"Nie udało się zapisać tablicy Huffmana")
+
+        elif input_method == "FMM":
+            self.show_fmm_options(input_message)
+
+            
+            
 
     def decode(self):
         method = self.combobox_dec.get()
@@ -282,6 +309,28 @@ class StegoApp(CTk):
             except Exception as e:
                 tk.messagebox.showerror("Błąd", f"Nie udało się odczytać wiadomości {str(e)}")
                 return
+            
+        elif method == "LSB+Huffman":
+            try:
+                path_huffman = filedialog.askopenfilename(
+                    filetypes=[("Text Files", "*.txt")])
+                
+                with open(path_huffman, 'r') as fi:
+                    table = fi.read()
+                    try:
+                        dir_huffman_table = json.loads(table)
+                    except Exception:
+                        tk.messagebox.showerror("Błąd", f"Niepoprawny format pliku z tablicą Huffmana! Podaj inny plik.")
+                        return
+
+                mess = huffman.decodeMessageHuffman(dir_huffman_table, self.filepath)
+                self.diplayDecodedMessage(mess)
+            except Exception as e:
+                tk.messagebox.showerror("Błąd", f"Nie udało się odczytać wiadomości {str(e)}")
+                return
+        
+        elif method == "FMM":
+            self.show_fmm_options(decode=True)
 
 
     def saveStegoImage(self, steg_img, dct=False):
@@ -305,7 +354,112 @@ class StegoApp(CTk):
         else:
             tk.messagebox.showerror("Błąd", f"Nie udało się odczytać wiadomości")
 
+
+    def ffmCoding(self, input_message, k, start_index):
+        try:
+            stego_img = fmm.codeMessageFMM(self.filepath, input_message, k, start_index)
+            self.saveStegoImage(stego_img, dct=False)
+        except Exception as e:
+            tk.messagebox.showerror("Błąd", f"Nie udało się zakodować wiadomości {str(e)}")
+            return
+
+
+    def show_fmm_options(self, input_message="", decode=False):
+        self.clear_view()
+        self.current_view = []
+
+        image_path = "tab_max.png"  # Ścieżka do Twojego obrazu
+        try:
+            image = Image.open(image_path)
+            image = image.resize((200, 200))  # Dostosowanie rozmiaru obrazu
+            fmm_image = ImageTk.PhotoImage(image)
+        except Exception as e:
+            tk.messagebox.showerror("Błąd", f"Nie udało się wczytać obrazu: {str(e)}")
+            return
+        
+        image_label = CTkLabel(master=self, image=fmm_image, text="")
+        image_label.grid(row=7, columnspan=2, padx=150, pady=(0, 10), sticky="nsew")
+        self.current_view.append(image_label)
+
+        label = CTkLabel(master=self, text="Wybierz opcję dla FMM", fg_color="#748CAB", bg_color="#242424", text_color="#242424")
+        label.grid(row=8, columnspan=2, padx=50, pady=(10, 10), sticky="nsew")
+        self.current_view.append(label)
+
+        # Tworzymy RadioButtony
+        self.radio_var = tk.StringVar(value="opcja 1")  # Domyślnie opcja 1
+ 
+        radio_button1 = CTkRadioButton(master=self, text="opcja 1 (ze zdjęcia)", variable=self.radio_var, value="opcja 1", text_color="#748CAB", bg_color="#242424", fg_color="#748CAB")
+        radio_button1.grid(row=9, columnspan=2, padx=50, pady=(5, 5), sticky="w")
+        self.current_view.append(radio_button1)
+
+        radio_button2 = CTkRadioButton(master=self, text="opcja 2 (same cyfry)", variable=self.radio_var, value="opcja 2", text_color="#748CAB", bg_color="#242424", fg_color="#748CAB")
+        radio_button2.grid(row=10, columnspan=2, padx=50, pady=(5, 5), sticky="w")
+        self.current_view.append(radio_button2)
+
+        radio_button3 = CTkRadioButton(master=self, text="opcja 3 (małe litery)", variable=self.radio_var, value="opcja 3", text_color="#748CAB", bg_color="#242424", fg_color="#748CAB")
+        radio_button3.grid(row=11, columnspan=2, padx=50, pady=(5, 5), sticky="w")
+        self.current_view.append(radio_button3)
+
+        # Dodajemy przycisk do zakodowania wiadomości
+        if decode:
+            decode_button = CTkButton(
+            master=self,
+            text="Zakoduj wiadomość",
+            fg_color="#F18F01",
+            bg_color="#242424",
+            border_width=2,
+            border_color="#F18F11",
+            text_color="#242424",
+            hover_color="#F0EBD8",
+            command=lambda: self.en_decode_fmm(decode=True)
+            )
+            decode_button.grid(row=12, columnspan=2, padx=50, pady=(20, 50), sticky="nsew")
+            self.current_view.append(decode_button)
+
+        else:
+            encode_button = CTkButton(
+                master=self,
+                text="Zakoduj wiadomość",
+                fg_color="#F18F01",
+                bg_color="#242424",
+                border_width=2,
+                border_color="#F18F11",
+                text_color="#242424",
+                hover_color="#F0EBD8",
+                command=lambda: self.en_decode_fmm(input_message)
+            )
+            encode_button.grid(row=12, columnspan=2, padx=50, pady=(20, 50), sticky="nsew")
+            self.current_view.append(encode_button)
+
+
+    def en_decode_fmm(self, input_message="", decode=False):
+        selected_option = self.radio_var.get()
+
+        # Ustawienia dla FMM w zależności od wybranej opcji
+        if selected_option == "opcja 1":
+            k, start_index = 5, 32
+        elif selected_option == "opcja 2":
+            k, start_index = 2, 48
+        elif selected_option == "opcja 3":
+            k, start_index = 3, 97
+        else:
+            tk.messagebox.showerror("Błąd", "Nie wybrano poprawnej opcji!")
+            return
+        
+        if decode:
+            try:
+                mess = fmm.decodeMessageFFM(self.filepath, k, start_index)
+                self.diplayDecodedMessage(mess)
+            except Exception as e:
+                tk.messagebox.showerror("Błąd", f"Nie udało się zakodować wiadomości: {str(e)}")
+                return
             
+        else:
+            try:
+                stego_img = fmm.codeMessageFMM(self.filepath, input_message, k, start_index)
+                self.saveStegoImage(stego_img, dct=False)
+            except Exception as e:
+                tk.messagebox.showerror("Błąd", f"Nie udało się zakodować wiadomości: {str(e)}")       
 
         
 

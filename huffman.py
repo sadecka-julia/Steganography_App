@@ -110,16 +110,15 @@ def decodeMessageHuffman(huffman_codes, stego_path):
 
     return(decoded_message)
 
-def codeMessageHuffman(path, message, output_path):
+def codeMessageHuffman(path, message):
     _, img = convertImage(path)
     _, stego_img, huffman_codes = huffmanCoding(img, message)
-    stego_img.save(output_path)
-
-    return huffman_codes
+    return stego_img, huffman_codes
 
 if __name__ == '__main__':
     message = 'Hello World!'
-    path = '/home/hubert/Documents/Studia/photo.jpg'
-    stego_path = "/home/hubert/Documents/Studia/wiadomosc_huffman.png"
-    huffman_codes = codeMessageHuffman(path, message, stego_path)
+    path = 'path/to/image'
+    stego_path = "path/to/stego/image"
+    stego_img, huffman_codes = codeMessageHuffman(path, message)
+    stego_img.save(stego_path)
     print("Odkodowana wiadomość:", decodeMessageHuffman(huffman_codes, stego_path))
