@@ -1,7 +1,5 @@
 from PIL import Image
-from scipy.fftpack import dct, idct
 import numpy as np
-from collections import Counter
 import cv2
 # from readDCT import extractBitsFromImage
 
@@ -36,7 +34,7 @@ def prepareImage(path):
     height, width, channels = img.shape
     height_skip, width_skip = img.strides[:2]
 
-    img = img[:img.shape[0] - img.shape[0] % 8, :img.shape[1] - img.shape[1] % 8]  # Dodać podpis, że zmniejszyłam obraz. Zmniejszyłam aby był podizelny przez 8
+    img = img[:img.shape[0] - img.shape[0] % 8, :img.shape[1] - img.shape[1] % 8]                        # Dodać podpis, że zmniejszyłam obraz. Zmniejszyłam aby był podizelny przez 8
     blocks = np.lib.stride_tricks.as_strided(img, 
                                     shape=(height//8, width//8, 8, 8, channels), 
                                     strides=(height_skip*8, width_skip*8, height_skip, width_skip, 1)) # Dzielenie obrazu na bloki 8x8 za pomocą wykorzystania strides z biblioteki numpy
@@ -60,12 +58,7 @@ def hideMessageInDCT(dct_blocks, message_in_bits, mode=5):
                 if channel in [2]:
                     if bit_index >= len(message_in_bits):
                         return dct_blocks  # zakończ jeśli wszystkie bity zostały ukryte
-                    # block = dct_blocks[i, j, :, :, channel]
 
-                    # zigzag = zigZagEncoding(block)
-
-                    idx = 0 # Miejsce zakodowania wiadomości
-                    # Ukrywamy w AC dlatego 0, 0
                     change_bit = int(dct_blocks[i, j, 0, 0, channel])
                     if mode==1:
                         if int(message_in_bits[bit_index]) == 1:
@@ -138,9 +131,6 @@ def hideMessageInDCT(dct_blocks, message_in_bits, mode=5):
                                 change_bit -= 1
                             elif change_bit % 10 == 9:
                                 change_bit -= 2
-                    # print(f"Embedding bit {message_in_bits[bit_index]} at position ({i}, {j}, {channel}), coefficient {zigzag}")
-                    # Aktualizacja współczynników po wprowadzeniu wiadomości
-                    # block[0, 0] = zigzag[idx]
                     dct_blocks[i, j, 0, 0, channel] = change_bit
                     bit_index += 1
     return dct_blocks

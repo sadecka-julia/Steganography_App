@@ -1,0 +1,62 @@
+Aplikacja "Steganography App" — Pomoc
+
+Opis aplikacji:
+Aplikacja "Steganography App" umożliwia ukrywanie wiadomości w obrazach przy użyciu metod steganograficznych. Wspierane algorytmy to: LSB, Random LSB, LSB+Huffman, MSB, Pixel MSB, DCT, FMM.
+
+---
+
+Opis metod steganograficznych:
+
+- LSB (Least Significant Bit):
+  Ukrywanie informacji w najmniej znaczącym bicie każdego piksela.
+
+- Random LSB:
+  Ulepszona metoda LSB, w której bity wiadomości są rozmieszczane losowo w obrazie.
+
+- LSB+Huffman:
+  Wiadomość jest najpierw kodowana za pomocą algorytmu Huffmana, a następnie ukrywana w bitach LSB pikseli.
+
+- MSB (Most Significant Bit):
+  Technika ta wykorzystuje bity nr 5 i 6 każdego piksela do ukrycia informacji.
+
+- Pixel MSB:
+  Rozszerzenie metody MSB, w którym dane są ukrywane w piątym i szóstym bicie kanałów kolorów (zielonego lub niebieskiego), a czerwony kanał wskazuje miejsce ukrycia.
+
+- DCT (Discrete Cosine Transform):
+  Dane są ukrywane w blokach obrazu przetworzonych transformacją DCT, co pozwala na efektywne ukrycie informacji przy minimalnym wpływie na jakość obrazu.
+
+- FMM (File Modulus Method):
+  Dane są ukrywane w pikselach obrazu, które nie są wielokrotnościami liczby 5.
+
+---
+
+Instrukcja obsługi:
+
+Kodowanie wiadomości:
+1. Wybierz opcję "Zakoduj wiadomość".
+2. Kliknij "Wybierz zdjęcie", aby załadować obraz (dozwolone formaty: .png, .jpg, .jpeg, .bmp, .gif).
+3. W polu "Wprowadź wiadomość do ukrycia" wpisz tekst, który chcesz ukryć.
+4. Wybierz algorytm z listy "Wybierz opcję":
+   - LSB, Random LSB, LSB+Huffman, MSB, Pixel MSB, DCT, FMM.
+5. Kliknij "Zakoduj".
+   Zostaniesz poproszony o podanie nazwy pliku, w którym zostanie zapisany obraz z ukrytą wiadomością.
+
+Uwagi:
+- FMM: Wybierz tablicę znaków ASCII zgodną z wiadomością do ukrycia.
+- LSB+Huffman: Zapisz plik z kodami Huffmana wymagany do późniejszego odczytu wiadomości.
+
+---
+
+Dekodowanie wiadomości:
+1. Wybierz opcję "Odczytaj wiadomość".
+2. Kliknij "Wybierz zdjęcie", aby załadować obraz (dozwolone formaty: .png, .bmp, .gif).
+3. Wybierz algorytm z listy "Wybierz opcję":
+   - LSB, Random LSB, LSB+Huffman, MSB, Pixel MSB, DCT, FMM.
+4. Kliknij "Odczytaj".
+   Po pomyślnym odczytaniu wiadomość zostanie wyświetlona na ekranie.
+
+Uwagi:
+- FMM: Użyj tablicy znaków ASCII zgodnej z wiadomością ukrytą w obrazie.
+- LSB+Huffman: Wczytaj plik z kodami Huffmana, aby odczytać wiadomość.
+
+

@@ -60,9 +60,22 @@ class StegoApp(CTk):
                                 border_width=2,
                                 text_color="#242424", 
                                 command=self.select_image)
+        
+        self.help_button = CTkButton(
+            master=self,
+            text="?",
+            width=30,
+            fg_color="#748CAB",
+            hover_color="#F0EBD8",
+            border_color="#748CBB",
+            bg_color="#242424",
+            text_color="#242424",
+            command=self.show_help
+        )
 
         self.button1.grid(row=0, column=0, padx=0, pady=(0, 0), sticky="nsew")
         self.button2.grid(row=0, column=1, padx=0, pady=(0, 0), sticky="nsew")
+        self.help_button.grid(row=1, column=0, padx=(0, 10), pady=0, sticky="sw")
         self.button3.grid(row=2, columnspan=2, padx=150, pady=(10, 40), sticky="new")
 
         self.current_view = None
@@ -459,7 +472,26 @@ class StegoApp(CTk):
                 stego_img = fmm.codeMessageFMM(self.filepath, input_message, k, start_index)
                 self.saveStegoImage(stego_img, dct=False)
             except Exception as e:
-                tk.messagebox.showerror("Błąd", f"Nie udało się zakodować wiadomości: {str(e)}")       
+                tk.messagebox.showerror("Błąd", f"Nie udało się zakodować wiadomości: {str(e)}")   
+
+
+    def show_help(self):
+        # Funkcja otwiera okno pomocy
+        try:
+            with open('help_final.txt', 'r', encoding='utf-8') as f:
+                help_text = f.read()
+            
+            help_window = CTkToplevel(self)
+            help_window.geometry("600x400")
+            help_window.title("Pomoc")
+
+            text_widget = CTkTextbox(help_window, wrap="word")
+            text_widget.insert("1.0", help_text)
+            text_widget.configure(state="disabled")  # Uniemożliwia edytowanie
+            text_widget.pack(expand=True, fill="both", padx=10, pady=10)
+        except Exception as e:
+            tk.messagebox.showerror("Błąd", f"Nie udało się załadować pliku pomocy: {str(e)}")
+    
 
         
 

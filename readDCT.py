@@ -33,9 +33,7 @@ def extractBitsFromImage(image_path, mode=5):
                     if bit_index >= mess_lenght:
                         print("Finished extracting all bits")
                         return extracted_bits
-                    
-                    block = dct_blocks[i, j, :, :, channel]
-                    # zigzag = zigZagEncoding(block)
+
                     value = int(dct_blocks[i, j, 0, 0, channel])
                     if mode==3:
                         if (value%6) in [4, 5, 0]:
